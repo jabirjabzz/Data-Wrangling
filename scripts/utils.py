@@ -12,6 +12,27 @@ def clean_text(text):
     text = re.sub(r'[^\u0D00-\u0D7F\s.,!?]', '', text)  # Keep only Malayalam characters and punctuation
     return text.strip()
 
+def chunk_text(text, max_length=512, overlap=50):
+    """
+    Split text into chunks of specified maximum length with overlap.
+    
+    Args:
+        text (str): Input text to be chunked
+        max_length (int): Maximum number of words per chunk
+        overlap (int): Number of words to overlap between chunks
+    
+    Returns:
+        list: List of text chunks
+    """
+    words = text.split()
+    chunks = []
+    start = 0
+    while start < len(words):
+        end = min(start + max_length, len(words))
+        chunks.append(" ".join(words[start:end]))
+        start += (max_length - overlap)
+    return chunks
+
 def filter_stopwords(text, language="ml"):
     """
     Filters stop words from a given text using the stopwordsiso package.
