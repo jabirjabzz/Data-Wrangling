@@ -1,12 +1,30 @@
 import re
 import stopwordsiso
+import os
 
 def is_malayalam(text):
     """Check if text contains Malayalam characters."""
-    return bool(re.search(r'[\u0D00-\u0D7F]', text))
+    if not isinstance(text, str):
+        # Print debug info if text is not a string
+        print(f"Non-string input: {type(text)}, value: {text}")
+        return False
+    
+    # Improved Malayalam character detection
+    malayalam_match = re.search(r'[\u0D00-\u0D7F]', text)
+    
+    # Debug print for texts without Malayalam characters
+    if not malayalam_match:
+        print(f"No Malayalam characters found in text: {text[:100]}...")
+    
+    return bool(malayalam_match)
 
 def clean_text(text):
     """Clean and normalize Malayalam text."""
+    # Ensure input is a string
+    if not isinstance(text, str):
+        print(f"Non-string input in clean_text: {type(text)}")
+        return ""
+    
     # Remove unwanted characters
     text = re.sub(r'\s+', ' ', text)  # Normalize spaces
     text = re.sub(r'[^\u0D00-\u0D7F\s.,!?]', '', text)  # Keep only Malayalam characters and punctuation
