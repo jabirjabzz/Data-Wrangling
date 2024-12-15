@@ -1,22 +1,24 @@
 import os
-from scripts.clean_text import clean_text_file
+from clean_text import process_directory
 
 def main():
+    """
+    Main function to execute text processing.
+    """
+    # Specific input and output paths
     input_dir = r"C:\Users\Administrator\Documents\GitHub\Text cleaning\data\input_data"
-    output_file = os.path.join("C:\\Users\\Administrator\\Documents\\GitHub\\Text cleaning\\data\\output_data", "cleaned_data.jsonl")
+    output_file = os.path.join(r"C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data", "cleaned_data.jsonl")
     
-    print("Starting Malayalam text cleaning and chunking...")
-    clean_text_file(
-        input_dir, 
-        output_file, 
-        max_chunk_length=512,  # Adjust as needed
-        chunk_overlap=50       # Adjust as needed
+    # Ensure output directory exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    
+    # Process directory
+    process_directory(
+        input_dir=input_dir,
+        output_file=output_file,
+        max_chunk_length=512,
+        chunk_overlap=50
     )
-    print(f"Text cleaning and chunking completed. Cleaned text saved to {output_file}")
-
-    print("Input directory contents:")
-    for filename in os.listdir(input_dir):
-        print(filename)
 
 if __name__ == "__main__":
     main()
