@@ -1,5 +1,5 @@
 import os
-from clean_text import process_directory
+from scripts.clean_text import process_directory
 
 def main():
     """
