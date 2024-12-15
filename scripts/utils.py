@@ -1,29 +1,48 @@
 import re
-from bs4 import BeautifulSoup
-import nltk
-from nltk.corpus import stopwords
+import stopwordsiso
 
-nltk.download("stopwords")
+def is_malayalam(text):
+    """Check if text contains Malayalam characters."""
+    return bool(re.search(r'[\u0D00-\u0D7F]', text))
 
-def remove_html_tags(text):
-    """Remove HTML tags using BeautifulSoup."""
-    return BeautifulSoup(text, "html.parser").get_text()
+def clean_text(text):
+    """Clean and normalize Malayalam text."""
+    # Remove unwanted characters
+    text = re.sub(r'\s+', ' ', text)  # Normalize spaces
+    text = re.sub(r'[^\u0D00-\u0D7F\s.,!?]', '', text)  # Keep only Malayalam characters and punctuation
+    return text.strip()
 
-def remove_special_characters(text):
-    """Remove special characters and numbers."""
-    return re.sub(r"[^a-zA-Z\s]", "", text)
+def filter_stopwords(text, language="ml"):
+    """
+    Filters stop words from a given text using the stopwordsiso package.
 
-def remove_duplicates(lines):
-    """Remove duplicate lines."""
-    return list(set(lines))
+    Args:
+        text (str): The input text.
+        language (str): The ISO 639-1 language code (e.g., "ml" for Malayalam).
 
-def normalize_text(text):
-    """Lowercase and strip extra whitespace."""
-    return text.strip().lower()
+    Returns:
+        list or None: A list of words with stop words removed, or None if the language is not supported.
+    """
+    try:
+        stop_words = set(stopwordsiso.stopwords(language))
+    except KeyError:
+        print(f"Language '{language}' is not supported by stopwordsiso.")
+        return None
+    except Exception as e:  # Catch any other exceptions
+        print(f"An unexpected error occurred: {e}")
+        return None
 
-def remove_stopwords(text):
-    """Remove stopwords."""
-    stop_words = set(stopwords.words("english"))
     words = text.split()
     filtered_words = [word for word in words if word not in stop_words]
-    return " ".join(filtered_words)
+    return filtered_words
+
+def remove_stopwords(text):
+    """Remove Malayalam stopwords."""
+    # Filter stopwords
+    filtered_words = filter_stopwords(text, language="ml")
+    
+    # If filtering failed, return original text
+    if filtered_words is None:
+        return text
+    
+    return ' '.join(filtered_words)
