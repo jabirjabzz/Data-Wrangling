@@ -6,17 +6,12 @@ from typing import List
 from .utils import (
     is_malayalam, 
     clean_text, 
-    chunk_text, 
     remove_stopwords, 
     setup_logging,
     remove_repetitive_text
 )
 
-def process_json_file(
-    file_path: str, 
-    max_chunk_length: int = 512, 
-    chunk_overlap: int = 50
-) -> List[dict]:
+def process_json_file(file_path: str) -> List[dict]:
     """
     Process a single JSON file for Malayalam text.
     """
@@ -34,22 +29,15 @@ def process_json_file(
             contents = [item.get("content", "") for item in data if isinstance(item, dict)]
 
         for content in contents:
-            if not content or not is_malayalam(content):
-                continue
+            # if not content or not is_malayalam(content):
+            #     logger.info(f"Skipped non-Malayalam content: {content[:30]}...")
+            #     continue
 
             cleaned_content = clean_text(content)
+            logger.info(f"Cleaned content: {cleaned_content[:30]}...")
             cleaned_content = remove_stopwords(cleaned_content)
-            cleaned_content = remove_repetitive_text(cleaned_content)  # Remove repetitive sentences
-
-            content_chunks = chunk_text(
-                cleaned_content, 
-                max_length=max_chunk_length, 
-                overlap=chunk_overlap
-            )
-
-            for chunk in content_chunks:
-                chunk_entry = {"text": chunk["text"]}
-                processed_entries.append(chunk_entry)
+            cleaned_content = remove_repetitive_text(cleaned_content)
+            processed_entries.append({"text": cleaned_content})
 
         logger.info(f"Processed file: {file_path}")
 
@@ -58,12 +46,8 @@ def process_json_file(
 
     return processed_entries
 
-def process_directory(
-    input_dir: str, 
-    output_file: str, 
-    max_chunk_length: int = 512, 
-    chunk_overlap: int = 50
-) -> None:
+
+def process_directory(input_dir: str, output_file: str) -> None:
     """
     Process all JSON files in a directory.
     """
@@ -81,7 +65,7 @@ def process_directory(
         for file in files:
             if file.endswith(".json"):
                 file_path = os.path.join(root, file)
-                processed_data.extend(process_json_file(file_path, max_chunk_length, chunk_overlap))
+                processed_data.extend(process_json_file(file_path))
                 total_files += 1
 
     try:

@@ -18,14 +18,14 @@ def setup_logging(log_file: str = 'text_processing.log') -> logging.Logger:
     )
     return logging.getLogger(__name__)
 
-def is_malayalam(text: str) -> bool:
-    """
-    Check if text contains Malayalam characters.
-    """
-    if not isinstance(text, str):
-        logging.warning(f"Non-string input: {type(text)}")
-        return False
-    return bool(re.search(r'[\u0D00-\u0D7F]', text))
+# def is_malayalam(text: str) -> bool:
+#     """
+#     Check if text contains Malayalam characters.
+#     """
+#     if not isinstance(text, str):
+#         logging.warning(f"Non-string input: {type(text)}")
+#         return False
+#     return bool(re.search(r'[\u0D00-\u0D7F]', text))
 
 def clean_text(text: str) -> str:
     """
@@ -64,30 +64,30 @@ def remove_repetitive_text(text: str, max_repeats: int = 3) -> str:
 
     return " ".join(filtered_sentences)
 
-def chunk_text(text: str, max_length: int = 512, overlap: int = 50) -> List[str]:
-    """
-    Split text into chunks with overlapping sections.
-    Each chunk is represented as a JSON object.
+# def chunk_text(text: str, max_length: int = 512, overlap: int = 50) -> List[str]:
+#     """
+#     Split text into chunks with overlapping sections.
+#     Each chunk is represented as a JSON object.
 
-    Args:
-        text (str): Input text to chunk
-        max_length (int): Maximum number of words per chunk
-        overlap (int): Number of words to overlap between chunks
+#     Args:
+#         text (str): Input text to chunk
+#         max_length (int): Maximum number of words per chunk
+#         overlap (int): Number of words to overlap between chunks
 
-    Returns:
-        List[str]: List of JSON strings, each containing a chunk of text
-    """
-    words = text.split()
-    chunks = []
-    start = 0
+#     Returns:
+#         List[str]: List of JSON strings, each containing a chunk of text
+#     """
+#     words = text.split()
+#     chunks = []
+#     start = 0
 
-    while start < len(words):
-        end = min(start + max_length, len(words))
-        chunk_text = " ".join(words[start:end])
-        chunks.append({"text": chunk_text})
-        start += (max_length - overlap)
+#     while start < len(words):
+#         end = min(start + max_length, len(words))
+#         chunk_text = " ".join(words[start:end])
+#         chunks.append({"text": chunk_text})
+#         start += (max_length - overlap)
 
-    return chunks
+#     return chunks
 
 def remove_stopwords(text: str, language: str = "ml") -> str:
     """
