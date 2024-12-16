@@ -2,3 +2,8 @@
 cenv/
 data/
 output
+malayalam_json_chunking.log
+scripts/__pycache__/
+scripts/main.py
+test.py
+text_processing.log
