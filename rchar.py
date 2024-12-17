@@ -3,6 +3,19 @@ import re
 from collections import Counter
 import difflib
 import os
+import logging
+import traceback
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s: %(message)s',
+    handlers=[
+        logging.FileHandler('json_processing.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 def safe_json_load(file_path):
     """
@@ -17,31 +30,36 @@ def safe_json_load(file_path):
     try:
         # Try standard JSON loading
         with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            logger.info(f"Successfully loaded JSON from {file_path}")
+            return data
     except json.JSONDecodeError:
         # If standard loading fails, try reading lines
         with open(file_path, 'r', encoding='utf-8') as f:
             # Read all lines and try parsing each
             lines = f.readlines()
-            for line in lines:
+            logger.info(f"File {file_path} has {len(lines)} lines")
+            
+            for i, line in enumerate(lines):
                 try:
-                    return json.loads(line.strip())
-                except json.JSONDecodeError:
+                    data = json.loads(line.strip())
+                    logger.info(f"Successfully parsed line {i+1}")
+                    return data
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Failed to parse line {i+1}: {e}")
                     continue
         
         # If no valid JSON found
+        logger.error(f"No valid JSON found in {file_path}")
         raise ValueError(f"No valid JSON found in {file_path}")
 
 def preprocess_text(text):
     """
     Preprocess text for repetition detection.
-    
-    Args:
-        text (str): Input text
-    
-    Returns:
-        str: Preprocessed text
     """
+    if not isinstance(text, str):
+        text = str(text)
+    
     # Remove extra whitespaces
     text = re.sub(r'\s+', ' ', text).strip()
     # Remove punctuation except Malayalam-specific punctuations
@@ -51,12 +69,6 @@ def preprocess_text(text):
 def extract_sentences(text):
     """
     Extract sentences from Malayalam text.
-    
-    Args:
-        text (str): Input text
-    
-    Returns:
-        List[str]: List of sentences
     """
     # Split sentences preserving Malayalam-specific punctuations
     sentences = re.split(r'[.\n!?]+', text)
@@ -67,13 +79,6 @@ def extract_sentences(text):
 def detect_near_duplicates(sentences, similarity_threshold=0.8):
     """
     Detect near-duplicate sentences using difflib.
-    
-    Args:
-        sentences (List[str]): List of sentences
-        similarity_threshold (float): Similarity threshold for duplicates
-    
-    Returns:
-        List[str]: Unique sentences
     """
     unique_sentences = []
     for i, sentence in enumerate(sentences):
@@ -93,14 +98,6 @@ def detect_near_duplicates(sentences, similarity_threshold=0.8):
 def remove_repetitive_phrases(text, min_phrase_length=5, max_repetitions=3):
     """
     Remove repetitive phrases from text.
-    
-    Args:
-        text (str): Input text
-        min_phrase_length (int): Minimum words in a phrase to consider
-        max_repetitions (int): Maximum allowed repetitions
-    
-    Returns:
-        str: Text with repetitive phrases removed
     """
     # Preprocess text
     preprocessed_text = preprocess_text(text)
@@ -135,17 +132,17 @@ def remove_repetitive_phrases(text, min_phrase_length=5, max_repetitions=3):
 def process_repetition_removal(input_path, output_path):
     """
     Process JSON file to remove repetitions.
-    
-    Args:
-        input_path (str): Path to input JSON file
-        output_path (str): Path to output JSON file
     """
     try:
+        logger.info(f"Starting to process {input_path}")
+        
         # Safely load JSON data
         data = safe_json_load(input_path)
         
         # Extract text (handle different possible JSON structures)
         text = data.get('text', '') if isinstance(data, dict) else str(data)
+        
+        logger.info(f"Original text length: {len(text)}")
         
         # Remove repetitive content
         processed_text = remove_repetitive_phrases(text)
@@ -157,36 +154,41 @@ def process_repetition_removal(input_path, output_path):
         # Reconstruct text
         final_text = ' '.join(unique_sentences)
         
+        logger.info(f"Processed text length: {len(final_text)}")
+        
         # Write processed text
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump({"text": final_text}, f, ensure_ascii=False, indent=2)
         
-        print(f"Processed {input_path}")
-        print(f"Original text length: {len(text.split())}")
-        print(f"Processed text length: {len(final_text.split())}")
-    
+        logger.info(f"Successfully processed {input_path}")
+        
     except Exception as e:
-        print(f"Error processing {input_path}: {e}")
+        logger.error(f"Error processing {input_path}: {e}")
+        logger.error(traceback.format_exc())
 
 def batch_process_repetition(input_directory, output_directory):
     """
     Batch process all JSON files in a directory.
-    
-    Args:
-        input_directory (str): Path to input JSON files
-        output_directory (str): Path to output processed files
     """
     # Create output directory if not exists
     os.makedirs(output_directory, exist_ok=True)
     
+    # Get list of JSON files
+    json_files = [f for f in os.listdir(input_directory) if f.endswith('.json')]
+    
+    logger.info(f"Total JSON files found: {len(json_files)}")
+    
     # Process each JSON file
-    for filename in os.listdir(input_directory):
-        if filename.endswith('.json'):
-            input_path = os.path.join(input_directory, filename)
-            output_path = os.path.join(output_directory, f'processed_{filename}')
-            
+    for filename in json_files:
+        input_path = os.path.join(input_directory, filename)
+        output_path = os.path.join(output_directory, f'processed_{filename}')
+        
+        try:
             process_repetition_removal(input_path, output_path)
-
+        except Exception as e:
+            logger.error(f"Failed to process {filename}: {e}")
+    
+    logger.info("Batch processing complete")
 # Example usage
 if __name__ == "__main__":
     # Example for single file processing
@@ -194,9 +196,7 @@ if __name__ == "__main__":
     #     'input.json', 
     #     'output.json'
     # )
-    
+    input_dir= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root1',
+    output_dir= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root2' 
+    batch_process_repetition(input_dir, output_dir) 
     # Example for batch processing
-    batch_process_repetition(
-        input_directory= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root1',
-        output_directory= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root2'
-    )
