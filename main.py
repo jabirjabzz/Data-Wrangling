@@ -8,7 +8,7 @@ def main():
     """
     # Specific input and output paths
     input_dir = r"C:\Users\Administrator\Documents\GitHub\Text cleaning\data\input_data"
-    output_file = os.path.join(r"C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data", "cleaned_data.jsonl")
+    output_file = os.path.join(r"C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root1", "cleaned_data.jsonl")
     
     # Ensure output directory exists
     os.makedirs(os.path.dirname(output_file), exist_ok=True)

@@ -2,6 +2,35 @@ import json
 import re
 from collections import Counter
 import difflib
+import os
+
+def safe_json_load(file_path):
+    """
+    Safely load JSON file, handling different formats.
+    
+    Args:
+        file_path (str): Path to the JSON file
+    
+    Returns:
+        dict: Parsed JSON data
+    """
+    try:
+        # Try standard JSON loading
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except json.JSONDecodeError:
+        # If standard loading fails, try reading lines
+        with open(file_path, 'r', encoding='utf-8') as f:
+            # Read all lines and try parsing each
+            lines = f.readlines()
+            for line in lines:
+                try:
+                    return json.loads(line.strip())
+                except json.JSONDecodeError:
+                    continue
+        
+        # If no valid JSON found
+        raise ValueError(f"No valid JSON found in {file_path}")
 
 def preprocess_text(text):
     """
@@ -103,38 +132,41 @@ def remove_repetitive_phrases(text, min_phrase_length=5, max_repetitions=3):
     
     return ' '.join(filtered_words)
 
-def process_repetition_removal(input_file, output_file):
+def process_repetition_removal(input_path, output_path):
     """
     Process JSON file to remove repetitions.
     
     Args:
-        input_file (str): Path to input JSON file
-        output_file (str): Path to output JSON file
+        input_path (str): Path to input JSON file
+        output_path (str): Path to output JSON file
     """
-    # Read input file
-    with open(input_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    try:
+        # Safely load JSON data
+        data = safe_json_load(input_path)
+        
+        # Extract text (handle different possible JSON structures)
+        text = data.get('text', '') if isinstance(data, dict) else str(data)
+        
+        # Remove repetitive content
+        processed_text = remove_repetitive_phrases(text)
+        
+        # Extract unique sentences
+        sentences = extract_sentences(processed_text)
+        unique_sentences = detect_near_duplicates(sentences)
+        
+        # Reconstruct text
+        final_text = ' '.join(unique_sentences)
+        
+        # Write processed text
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump({"text": final_text}, f, ensure_ascii=False, indent=2)
+        
+        print(f"Processed {input_path}")
+        print(f"Original text length: {len(text.split())}")
+        print(f"Processed text length: {len(final_text.split())}")
     
-    # Extract text
-    text = data.get('text', '')
-    
-    # Remove repetitive content
-    processed_text = remove_repetitive_phrases(text)
-    
-    # Extract unique sentences
-    sentences = extract_sentences(processed_text)
-    unique_sentences = detect_near_duplicates(sentences)
-    
-    # Reconstruct text
-    final_text = ' '.join(unique_sentences)
-    
-    # Write processed text
-    with open(output_file, 'w', encoding='utf-8') as f:
-        json.dump({"text": final_text}, f, ensure_ascii=False, indent=2)
-    
-    print(f"Processed {input_file}")
-    print(f"Original text length: {len(text.split())}")
-    print(f"Processed text length: {len(final_text.split())}")
+    except Exception as e:
+        print(f"Error processing {input_path}: {e}")
 
 def batch_process_repetition(input_directory, output_directory):
     """
@@ -144,8 +176,6 @@ def batch_process_repetition(input_directory, output_directory):
         input_directory (str): Path to input JSON files
         output_directory (str): Path to output processed files
     """
-    import os
-    
     # Create output directory if not exists
     os.makedirs(output_directory, exist_ok=True)
     
@@ -167,6 +197,6 @@ if __name__ == "__main__":
     
     # Example for batch processing
     batch_process_repetition(
-        input_directory='path/to/input/json/files',
-        output_directory='path/to/output/processed/files'
+        input_directory= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root1',
+        output_directory= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root2'
     )
