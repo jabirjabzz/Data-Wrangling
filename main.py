@@ -1,4 +1,5 @@
 import os
+import sys
 from scripts.clean_text import process_directory
 
 def main():
@@ -15,10 +16,10 @@ def main():
     # Process directory
     process_directory(
         input_dir=input_dir,
-        output_file=output_file,
-        max_chunk_length=512,
-        chunk_overlap=50
+        output_file=output_file
     )
+    print("Processing complete. Exiting...")
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
