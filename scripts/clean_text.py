@@ -4,7 +4,7 @@ import logging
 from typing import List
 
 from .utils import (
-    is_malayalam, 
+    # is_malayalam, 
     clean_text, 
     remove_stopwords, 
     setup_logging,
