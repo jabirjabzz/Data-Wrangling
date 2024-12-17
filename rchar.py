@@ -17,41 +17,39 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def safe_json_load(file_path):
-    """
-    Safely load JSON file, handling different formats.
-    
-    Args:
-        file_path (str): Path to the JSON file
-    
-    Returns:
-        dict: Parsed JSON data
-    """
+    """Safely load JSON or JSONL file."""
     try:
-        # Try standard JSON loading
         with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            logger.info(f"Successfully loaded JSON from {file_path}")
-            return data
-    except json.JSONDecodeError:
-        # If standard loading fails, try reading lines
-        with open(file_path, 'r', encoding='utf-8') as f:
-            # Read all lines and try parsing each
-            lines = f.readlines()
-            logger.info(f"File {file_path} has {len(lines)} lines")
-            
-            for i, line in enumerate(lines):
-                try:
-                    data = json.loads(line.strip())
-                    logger.info(f"Successfully parsed line {i+1}")
-                    return data
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Failed to parse line {i+1}: {e}")
-                    continue
-        
-        # If no valid JSON found
-        logger.error(f"No valid JSON found in {file_path}")
-        raise ValueError(f"No valid JSON found in {file_path}")
+            content = f.read()
+
+        if file_path.lower().endswith('.jsonl'):  # Case-insensitive check
+            parsed_objects = []
+            for line in content.splitlines():
+                line = line.strip()
+                if line:  # Skip empty lines
+                    try:
+                        parsed_objects.append(json.loads(line))
+                    except json.JSONDecodeError as e:
+                        print(f"Error decoding JSON in line: {line}. Error: {e}") #Print the error to debug
+                        continue
+            if not parsed_objects:
+                raise ValueError(f"No valid JSON found in {file_path}")
+            return parsed_objects
+
+        elif file_path.lower().endswith('.json'): # Check for standard JSON
+            try:
+                return json.loads(content) # Directly parse the content
+            except json.JSONDecodeError:
+                raise ValueError(f"Invalid JSON format in {file_path}")
+        else:
+            raise ValueError(f"File format not supported. Use .json or .jsonl")
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found: {file_path}")
+    except Exception as e:
+        raise Exception(f"An error occurred: {e}")
 
 def preprocess_text(text):
     """
@@ -196,7 +194,7 @@ if __name__ == "__main__":
     #     'input.json', 
     #     'output.json'
     # )
-    input_dir= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root1',
-    output_dir= r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root2' 
+    input_dir= (r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root1')
+    output_dir= (r'C:\Users\Administrator\Documents\GitHub\Text cleaning\data\output_data\root2')
     batch_process_repetition(input_dir, output_dir) 
     # Example for batch processing
