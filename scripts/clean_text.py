@@ -11,70 +11,81 @@ from .utils import (
     remove_repetitive_text
 )
 
-def process_json_file(file_path: str) -> List[dict]:
+def process_json_file(file_path: str, output_dir: str) -> None:
     """
-    Process a single JSON file for Malayalam text.
+    Process a single JSON file and save it with '_cleaned' suffix,
+    maintaining exact input structure.
     """
     logger = logging.getLogger(__name__)
-    processed_entries = []
 
     try:
+        # Read the input file exactly as it is
         with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+            original_data = json.load(f)
 
-        contents = []
-        if isinstance(data, dict):
-            contents = [data.get("content", "")]
-        elif isinstance(data, list):
-            contents = [item.get("content", "") for item in data if isinstance(item, dict)]
-
-        for content in contents:
-            # if not content or not is_malayalam(content):
-            #     logger.info(f"Skipped non-Malayalam content: {content[:30]}...")
-            #     continue
-
+        # Process based on original structure
+        if isinstance(original_data, dict):
+            # For single JSON object
+            content = original_data.get("content", "")
             cleaned_content = clean_text(content)
-            logger.info(f"Cleaned content: {cleaned_content[:30]}...")
             cleaned_content = remove_stopwords(cleaned_content)
             cleaned_content = remove_repetitive_text(cleaned_content)
-            processed_entries.append({"text": cleaned_content})
+            original_data["content"] = cleaned_content
+            processed_data = original_data
+            
+        elif isinstance(original_data, list):
+            # For list of JSON objects
+            processed_data = []
+            for item in original_data:
+                if isinstance(item, dict):
+                    content = item.get("content", "")
+                    cleaned_content = clean_text(content)
+                    cleaned_content = remove_stopwords(cleaned_content)
+                    cleaned_content = remove_repetitive_text(cleaned_content)
+                    item_copy = item.copy()
+                    item_copy["content"] = cleaned_content
+                    processed_data.append(item_copy)
+                else:
+                    processed_data.append(item)  # Maintain non-dict items as is
 
-        logger.info(f"Processed file: {file_path}")
+        # Create output filename with '_cleaned' suffix
+        filename = os.path.basename(file_path)
+        name, ext = os.path.splitext(filename)
+        output_filename = f"{name}_cleaned{ext}"
+        output_path = os.path.join(output_dir, output_filename)
+
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Write processed data in exact same structure as input
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(processed_data, f, ensure_ascii=False, indent=2)
+
+        logger.info(f"Processed and saved: {output_path}")
 
     except Exception as e:
         logger.error(f"Error processing {file_path}: {e}")
 
-    return processed_entries
-
-
-def process_directory(input_dir: str, output_file: str) -> None:
+def process_directory(input_dir: str, output_dir: str) -> None:
     """
-    Process all JSON files in a directory.
+    Process all JSON files in directory, maintaining individual files.
     """
     logger = setup_logging()
-    processed_data = []
     total_files = 0
 
     if not os.path.exists(input_dir):
         logger.error(f"Input directory not found: {input_dir}")
         return
 
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
     for root, _, files in os.walk(input_dir):
         for file in files:
             if file.endswith(".json"):
+                # Create corresponding output directory structure
+                rel_path = os.path.relpath(root, input_dir)
+                output_subdir = os.path.join(output_dir, rel_path)
+                
                 file_path = os.path.join(root, file)
-                processed_data.extend(process_json_file(file_path))
+                process_json_file(file_path, output_subdir)
                 total_files += 1
 
-    try:
-        with open(output_file, 'w', encoding='utf-8') as out_f:
-            for entry in processed_data:
-                out_f.write(json.dumps(entry, ensure_ascii=False) + '\n')
-
-        logger.info(f"Total Files Processed: {total_files}")
-        logger.info(f"Output File: {output_file}")
-
-    except Exception as e:
-        logger.error(f"Error saving processed data: {e}")
+    logger.info(f"Total Files Processed: {total_files}")
