@@ -33,6 +33,7 @@ def add_missing_full_stop(text):
 def segment_words(text, language='ml'):
     """Segments words where spaces are missing."""
     try:
+        # Use Indic NLP tokenizer for Malayalam
         tokens = indic_tokenize.trivial_tokenize(text, lang=language)
         return ' '.join(tokens)
     except Exception as e:
@@ -41,7 +42,6 @@ def segment_words(text, language='ml'):
 
 def insert_mask(text):
     """Insert <mask> intelligently into the text."""
-    # Example heuristic: Add <mask> after the longest word
     words = text.split()
     if len(words) > 1:
         longest_word_index = max(range(len(words)), key=lambda i: len(words[i]))
@@ -83,10 +83,23 @@ def clean_and_correct_text(text, language='ml'):
         logging.error(f"Error in text cleaning and correction: {e}")
         raise
 
+def save_to_csv(text, filename='corrected_text.csv'):
+    """Save the corrected text to a CSV file."""
+    try:
+        df = pd.DataFrame({"Corrected Text": [text]})
+        df.to_csv(filename, index=False)
+        logging.info(f"Corrected text saved to {filename}.")
+    except Exception as e:
+        logging.error(f"Error writing to CSV: {e}")
+        raise
+
 # Example usage
 text = "കേരളംഒരു മനോഹരമായസ്ഥലമാ."
 try:
     corrected_text = clean_and_correct_text(text, language='ml')
     logging.info(f"Corrected Text: {corrected_text}")
+    
+    # Save to CSV
+    save_to_csv(corrected_text)
 except Exception as e:
     logging.error(f"An error occurred: {e}")
