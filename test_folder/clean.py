@@ -2,69 +2,82 @@ import json
 import re
 import pandas as pd
 import os
+import glob
+from pathlib import Path
 
-def clean_data(input_path, output_path):
-    """
-    Cleans Malayalam text data from a JSON file, saves it to a CSV.
-
-    Args:
-        input_path: Path to the input JSON file.
-        output_path: Path to save the cleaned CSV file.
-    """
-
+def clean_data(input_pattern, output_dir):
+    """Cleans Malayalam text data from JSON files and saves to CSV."""
     try:
-        # Check if the input file exists *before* attempting to open it.
-        if not os.path.exists(input_path):
-            raise FileNotFoundError(f"Input file not found: {input_path}")
+        print(f"Input pattern: {input_pattern}")  # Debug: Print the input pattern
+        json_files = glob.glob(input_pattern)
+        print(f"Found files: {json_files}")  # Debug: Print the found files
+        if not json_files:
+            raise FileNotFoundError(f"No JSON files found matching pattern: {input_pattern}")
 
-        with open(input_path, "r", encoding="utf-8") as f:
-            try:  # Nested try for JSON decoding specifically.
-                data = json.load(f)
-            except json.JSONDecodeError as e:
-                raise json.JSONDecodeError(f"Error decoding JSON in {input_path}: {e}") from e #Improved error message
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-        if not data: #Check if the loaded data is empty.
-            raise ValueError(f"No data found in JSON file: {input_path}")
+        for input_file in json_files:
+            print(f"Processing file: {input_file}")
+            try:
+                with open(input_file, "r", encoding="utf-8") as f:
+                    try:
+                        data = json.load(f)
+                        if not isinstance(data, list):  # Check if data is a list 
+                            data = [data]  # Wrap single object in a list
+                        print(f"Data loaded: {data}")
+                    except json.JSONDecodeError as e:
+                        print(f"Warning: JSONDecodeError in {input_file}: {e}")
+                        continue
 
-        df = pd.DataFrame(data)
+                if not data:
+                    print(f"Warning: No data in {input_file}")
+                    continue
 
-        if df.empty: #Check if the DataFrame is empty after creation
-            raise pd.errors.EmptyDataError(f"DataFrame is empty after processing JSON data from {input_path}.")
+                df = pd.DataFrame(data)
+                if df.empty:
+                    print(f"Warning: Empty DataFrame after creation from {input_file}")
+                    continue
 
+                print(f"DataFrame columns: {df.columns}")
+                if "content" not in df.columns:
+                    print(f"Warning: 'content' column missing in {input_file}")
+                    continue
 
-        df.dropna(subset=["content"], inplace=True)
+                df.dropna(subset=["content"], inplace=True)
+                print(f"DataFrame length after dropna: {len(df)}")
 
-        def clean_text(text):
-            if not isinstance(text, str): #Check if text is string before cleaning it
-                return "" #Or handle the non-string value as needed.
-            text = re.sub(r"<.*?>", "", text)
-            text = re.sub(r"[^\u0D00-\u0D7F\s]", "", text)
-            text = re.sub(r"\s+", " ", text).strip()
-            return text
+                def clean_text(text):
+                    if not isinstance(text, str):
+                        return ""
+                    text = re.sub(r"<.*?>", "", text)
+                    text = re.sub(r"[^\u0D00-\u0D7F\s]", "", text)
+                    text = re.sub(r"\s+", " ", text).strip()
+                    return text
 
-        df["content"] = df["content"].apply(clean_text)
-        df.drop_duplicates(subset=["content"], inplace=True)
+                df["content"] = df["content"].apply(clean_text)
+                df.drop_duplicates(subset=["content"], inplace=True)
+                print(f"DataFrame length after drop_duplicates: {len(df)}")
 
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        df.to_csv(output_path, index=False, encoding="utf-8")
-        print(f"Data cleaning completed and saved to: {output_path}")
+                if len(df) == 0:
+                    print(f"Warning: Empty DataFrame after cleaning in {input_file}")
+                    continue
+
+                base_name = Path(input_file).stem
+                output_file = Path(output_dir) / f"{base_name}_cleaned.csv"
+                df.to_csv(output_file, index=False, encoding="utf-8")
+                print(f"Data from {input_file} saved to: {output_file}")
+
+            except Exception as e:
+                print(f"Error processing {input_file}: {e}")
 
     except FileNotFoundError as e:
-        print(f"Error: {e}")
-    except json.JSONDecodeError as e:
-        print(f"Error: {e}")
-    except pd.errors.EmptyDataError as e:
-        print(f"Error: {e}")
-    except ValueError as e:
-        print(f"Error: {e}")
+        print(f"FileNotFoundError: {e}")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        print(f"Overall Error: {e}")
 
-# Example usage (unchanged):
-input_file = "malayalam_data.json"
-output_file = "cleaned_data/cleaned_malayalam_data.csv"
+# Example Usage (Relative Paths - Recommended):
+input_pattern = "C:\\Users\\Administrator\\Documents\\GitHub\\Text cleaning\\data\\sample input\\*.json"  # Matches all .json files in the 'data' directory
+output_directory = "C:\\Users\Administrator\\Documents\GitHub\\Text cleaning\\test_folder\\test_output"
+clean_data(input_pattern, output_directory)
 
-clean_data(input_file, output_file)
 
-# Example with a non-existent file:
-# clean_data("non_existent_file.json", "output.csv")
