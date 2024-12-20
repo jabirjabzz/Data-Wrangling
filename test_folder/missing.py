@@ -2,6 +2,10 @@ from transformers import pipeline
 import pandas as pd
 import re
 from indicnlp.tokenize import indic_tokenize
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize the fill-mask pipeline
 try:
@@ -17,7 +21,8 @@ def fill_missing_word(text):
         predictions = fill_mask(text)
         return predictions[0]["sequence"]  # Return the top prediction
     except Exception as e:
-        raise RuntimeError(f"Error during mask filling: {e}")
+        logging.error(f"Error during mask filling: {e}")
+        raise RuntimeError("Error during mask filling.") from e
 
 def add_missing_full_stop(text):
     """Adds a full stop at the end if missing."""
@@ -31,32 +36,57 @@ def segment_words(text, language='ml'):
         tokens = indic_tokenize.trivial_tokenize(text, lang=language)
         return ' '.join(tokens)
     except Exception as e:
-        raise RuntimeError(f"Error during word segmentation: {e}")
+        logging.error(f"Error during word segmentation: {e}")
+        raise RuntimeError("Error during word segmentation.") from e
+
+def insert_mask(text):
+    """Insert <mask> intelligently into the text."""
+    # Example heuristic: Add <mask> after the longest word
+    words = text.split()
+    if len(words) > 1:
+        longest_word_index = max(range(len(words)), key=lambda i: len(words[i]))
+        words.insert(longest_word_index + 1, "<mask>")
+        return ' '.join(words)
+    else:
+        return f"<mask> {text}"
 
 def clean_and_correct_text(text, language='ml'):
     """
     Combines all preprocessing steps: 
     1. Segmentation,
-    2. Filling missing words using <mask>,
-    3. Adding punctuation.
+    2. Inserting <mask>,
+    3. Filling missing words,
+    4. Adding punctuation.
     """
     try:
+        logging.info(f"Original Text: {text}")
+        
+        # Step 1: Segment words
         text = segment_words(text, language=language)
-        if "<mask>" in text:  # Only apply fill_mask if <mask> exists
-            text = fill_missing_word(text)
+        logging.info(f"After Segmentation: {text}")
+        
+        # Step 2: Insert <mask> (if missing)
+        if "<mask>" not in text:
+            text = insert_mask(text)
+            logging.info(f"After Inserting Mask: {text}")
+        
+        # Step 3: Fill missing words
+        text = fill_missing_word(text)
+        logging.info(f"After Filling Missing Words: {text}")
+        
+        # Step 4: Add missing punctuation
         text = add_missing_full_stop(text)
+        logging.info(f"After Adding Missing Punctuation: {text}")
+        
         return text
     except Exception as e:
-        raise RuntimeError(f"Error in text cleaning and correction: {e}")
+        logging.error(f"Error in text cleaning and correction: {e}")
+        raise
 
 # Example usage
 text = "കേരളംഒരു മനോഹരമായസ്ഥലമാ."
 try:
     corrected_text = clean_and_correct_text(text, language='ml')
-    print(f"Corrected Text: {corrected_text}")
-    
-    # Save to CSV
-    pd.DataFrame({"Corrected Text": [corrected_text]}).to_csv('corrected_text.csv', index=False)
-    print("Corrected text saved to corrected_text.csv.")
+    logging.info(f"Corrected Text: {corrected_text}")
 except Exception as e:
-    print(f"An error occurred: {e}")
+    logging.error(f"An error occurred: {e}")
