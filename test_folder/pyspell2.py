@@ -1,68 +1,50 @@
-# from indicnlp.spellchecker import SpellChecker
+import re
 
-# # Initialize the spell checker for Malayalam
-# SPELL = SpellChecker(language='ml')
+def load_malayalam_words(filepath):
+    words = set()
+    with open(filepath, "r", encoding="utf-8") as f:
+        for line in f:
+            word = line.strip()
+            words.add(word)
+    return words
 
-# def correct_spelling_ml(text):
-#     corrected_words = []
-#     for word in text.split():
-#         corrected_word = SPELL.correct(word)
-#         corrected_words.append(corrected_word)
-#     return " ".join(corrected_words)
+def correct_spelling_ml(text, word_list):
+    words = re.findall(r"[\u0D00-\u0D7F]+", text) # Regex to extract Malayalam words
+    corrected_words = []
+    for word in words:
+        if word in word_list:
+            corrected_words.append(word)
+        else:
+            # Simple fallback: keep the original word
+            corrected_words.append(word)
+            print(f"Word '{word}' not found in dictionary.")
+    return " ".join(corrected_words)
 
-# # Example Usage
-# text = "എന്റെ പേര് രാഹുല്‍ ആണ്." #Example text
-# corrected_text = correct_spelling_ml(text)
-# print(f"Original Text: {text}")
-# print(f"Corrected Text: {corrected_text}")
+# Load the Malayalam wordlist
+try:
+    malayalam_words = load_malayalam_words(r"C:\Users\Administrator\Documents\GitHub\spell_checker_malayalam\spellchecker\libindic\spellchecker\data\ml_rootwords.txt") # Replace with your file path
+except FileNotFoundError:
+    print("Error: malayalam_wordlist.txt not found. Please provide a wordlist.")
+    exit()
 
-# text_with_errors = "മലയാളം സ്പെല്ലിംഗ് ചെക്കർ പരീക്ഷണം ആണ്."
-# corrected_text_with_errors = correct_spelling_ml(text_with_errors)
-# print(f"Original Text with errors: {text_with_errors}")
-# print(f"Corrected Text with errors: {corrected_text_with_errors}")
+# Example usage:
+text = "എന്റെ പേര് രാഹുല്‍ ആണ്."
+corrected_text = correct_spelling_ml(text, malayalam_words)
+print(f"Original: {text}")
+print(f"Corrected: {corrected_text}")
 
+text_with_errors = "മലയാളം സ്പെല്ലിംഗ ചെക്കർ പരീക്ഷണ ആണ്."
+corrected_text_with_errors = correct_spelling_ml(text_with_errors, malayalam_words)
+print(f"Original with errors: {text_with_errors}")
+print(f"Corrected with errors: {corrected_text_with_errors}")
 
-
-
-
-# from import spacy
-# from spacy_hunspell import spaCyHunSpell
-
-# # Load a blank spacy model
-# nlp = spacy.blank("xx")
-
-# # Add the Hunspell spell checker to the pipeline
-# hunspell = spaCyHunSpell(nlp, "path/to/hunspell_dictionaries")
-# nlp.add_pipe(hunspell)
-
-# # Example usage
-# text = "ഇത് ഒരു ഉദാഹരണ വാക്യം ആണ്"
-# doc = nlp(text)
-
-# for token in doc:
-#     if not token._.hunspell_spell:
-#         print(f"Misspelled word: {token.text}")
-#         print(f"Suggestions: {token._.hunspell_suggest}") import sanscript
-# from indic_transliteration.sanscript import transliterate
-
-# # Example usage
-# text = "ഇത് ഒരു ഉദാഹരണ വാക്യം ആണ്"
-# transliterated_text = transliterate(text, sanscript.MALAYALAM, sanscript.ITRANS)
-# print(transliterated_text)
-
-
-
-from spellchecker import SpellChecker
-
-# Initialize the spell checker for Malayalam
-spell = SpellChecker(language=None, case_sensitive=True)
-spell.word_frequency.load_text_file(r"C:\Users\Administrator\Documents\GitHub\Text_cleaning\test_folder\malayalaword.txt")
-
-# Example usage
-text = "ഇത് ഒരു ഉദാഹരണ വാക്യം ആണ്"
-words = text.split()
-
-for word in words:
-    if word not in spell:
-        print(f"Misspelled word: {word}")
-        print(f"Suggestions: {spell.candidates(word)}")
+# (cenv) PS C:\Users\Administrator\Documents\GitHub\Text_cleaning> python test_folder/pyspell2.py
+# Word 'എന്റെ' not found in dictionary.
+# Word 'പേര്' not found in dictionary.
+# Word 'രാഹുല്' not found in dictionary.
+# Original: എന്റെ പേര് രാഹുല്‍ ആണ്.
+# Corrected: എന്റെ പേര് രാഹുല് ആണ്
+# Word 'സ്പെല്ലിംഗ്' not found in dictionary.
+# Original with errors: മലയാളം സ്പെല്ലിംഗ് ചെക്കർ പരീക്ഷണം ആണ്.
+# Corrected with errors: മലയാളം സ്പെല്ലിംഗ് ചെക്കർ പരീക്ഷണം ആണ്
+# (cenv) PS C:\Users\Administrator\Documents\GitHub\Text_cleaning> 
