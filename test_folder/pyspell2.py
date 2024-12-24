@@ -1,113 +1,74 @@
 import json
-import random
 import re
-from transformers import MarianMTModel, MarianTokenizer, pipeline
-import nltk
-from nltk.corpus import wordnet
-
-# Download WordNet for synonym replacement
-nltk.download("wordnet")
+from transformers import MarianMTModel, MarianTokenizer
 
 # Define translation functions
-def translate_text(text, model_name):
+def load_model_and_tokenizer(model_path):
     """
-    Translate text using the specified MarianMT model.
+    Load the MarianMT model and tokenizer from a local directory.
     """
-    tokenizer = MarianTokenizer.from_pretrained(model_name)
-    model = MarianMTModel.from_pretrained(model_name)
-    # Tokenize input text
+    tokenizer = MarianTokenizer.from_pretrained(model_path)
+    model = MarianMTModel.from_pretrained(model_path)
+    return tokenizer, model
+
+def translate_text(text, tokenizer, model):
+    """
+    Translate text using the specified MarianMT model and tokenizer.
+    """
     inputs = tokenizer([text], return_tensors="pt", max_length=512, truncation=True)
-    # Generate translation
     translated_tokens = model.generate(**inputs)
-    # Decode translation
     return tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)[0]
 
-def back_translate(content):
+def back_translate(content, ml_en_path, en_ml_path):
     """
     Perform back-translation for Malayalam content.
     """
     try:
+        # Load models and tokenizers
+        ml_en_tokenizer, ml_en_model = load_model_and_tokenizer(ml_en_path)
+        en_ml_tokenizer, en_ml_model = load_model_and_tokenizer(en_ml_path)
+
         # Step 1: Translate Malayalam to English
-        intermediate = translate_text(content, "Helsinki-NLP/opus-mt-ml-en")
+        intermediate = translate_text(content, ml_en_tokenizer, ml_en_model)
         print("Intermediate (English):", intermediate)
 
         # Step 2: Translate English back to Malayalam
-        back_translated = translate_text(intermediate, "Helsinki-NLP/opus-mt-en-ml")
+        back_translated = translate_text(intermediate, en_ml_tokenizer, en_ml_model)
         print("Back-translated content (Malayalam):", back_translated)
-        
+
         return back_translated
     except Exception as e:
         print("Back-translation error:", e)
         return content  # Fallback to original content
 
-
 # Preprocessing functions
 def preprocess_content(content):
     """
-    Preprocess content to clean and remove duplicates.
+    Preprocess content to clean and remove garbled or repetitive text.
     """
-    # Remove non-informative text (punctuation-only or whitespace)
-    if not re.search(r'\w', content):
-        print("Content is non-informative. Skipping.")
-        return None
-
-    # Split into words, remove duplicates, and rejoin
-    words = content.split()
-    unique_words = list(dict.fromkeys(words))
-    return " ".join(unique_words)
-
-def expand_keywords(content):
-    """
-    Expand keywords into sentences using templates or a language model.
-    """
-    # Use a pre-trained paraphrasing model or language model
-    generator = pipeline("text2text-generation", model="t5-base", tokenizer="t5-base")
-    phrases = content.split()[:20]  # Process the first 20 keywords (adjust as needed)
-    expanded = []
-    for phrase in phrases:
-        try:
-            result = generator(f"Explain: {phrase}", max_length=50, num_return_sequences=1)
-            expanded.append(result[0]["generated_text"])
-        except Exception as e:
-            print(f"Error expanding keyword '{phrase}':", e)
-            expanded.append(phrase)  # Fallback to original keyword
-    return " ".join(expanded)
-
-def synonym_replacement(content, n=3):
-    """
-    Replace random words in the content with their synonyms.
-    """
-    words = content.split()
-    new_words = words.copy()
-    random_indices = random.sample(range(len(words)), min(n, len(words)))
-    for i in random_indices:
-        synonyms = wordnet.synsets(words[i])
-        if synonyms:
-            synonym = synonyms[0].lemmas()[0].name()
-            new_words[i] = synonym if synonym != words[i] else words[i]
-    return " ".join(new_words)
+    # Remove non-alphabetic characters
+    content = re.sub(r"[^a-zA-Z\u0D00-\u0D7F\s]", "", content)  # Malayalam range
+    # Replace multiple spaces with a single space
+    content = re.sub(r"\s+", " ", content)
+    return content.strip()
 
 # Augmentation pipeline
-def augment_text(content):
+def augment_text(content, ml_en_path, en_ml_path):
     """
-    Apply preprocessing and augmentation techniques to the content.
+    Apply preprocessing and back-translation to augment the content.
     """
     preprocessed = preprocess_content(content)
     if not preprocessed:
-        return content  # Return original if preprocessing failed
-
-    # Combine augmentation techniques
-    augmentations = []
-    augmentations.append(back_translate(preprocessed))
-    augmentations.append(expand_keywords(preprocessed))
-    augmentations.append(synonym_replacement(preprocessed))
-
-    # Join all augmented content into a single output
-    return " ".join(augmentations)
+        return content  # Skip if content is non-informative
+    return back_translate(preprocessed, ml_en_path, en_ml_path)
 
 # File paths
-input_file = r"C:\Users\Administrator\Documents\GitHub\Text_cleaning\data\input_data\https___archives.mathrubhumi.com_nri_pravasi-bharatham_chennai_chennai-news_19feb2022-1.6459726.json"
-output_file = r"C:\Users\Administrator\Documents\GitHub\Text_cleaning\data\output_data\root2\augmented_malayalam_data2.json"
+input_file = r"C:\Users\Administrator\Documents\GitHub\Text_cleaning\data\output_data\root1\http___www.puzha.com_cartoon__cleaned.json"
+output_file = r"C:\Users\Administrator\Documents\GitHub\Text_cleaning\data\output_data\root2\augmented_malayalam_data.json"
+
+# Local model paths (replace with actual paths)
+ml_en_path = r"C:\Users\Administrator\Documents\GitHub\ml-models\malayalam_back-translation\ml-en"
+en_ml_path = r"C:\Users\Administrator\Documents\GitHub\ml-models\malayalam_back-translation\en-ml"
 
 # Read input JSON file
 with open(input_file, "r", encoding="utf-8") as infile:
@@ -117,7 +78,7 @@ with open(input_file, "r", encoding="utf-8") as infile:
 original_content = data["content"]
 data["content"] = preprocess_content(original_content)  # Clean original content
 if data["content"]:
-    data["augmented_content"] = augment_text(original_content)
+    data["augmented_content"] = augment_text(data["content"], ml_en_path, en_ml_path)
 else:
     data["augmented_content"] = original_content  # Fallback to original
 
