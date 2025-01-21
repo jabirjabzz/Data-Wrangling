@@ -1,4 +1,4 @@
-﻿# Text Cleaning Pipeline
+﻿# Data Cleaning Pipeline
 
 This repository contains scripts to clean and preprocess crawled text for training machine learning models. It removes noise such as special characters, excessive whitespace, duplicates, and unwanted HTML tags.
 
