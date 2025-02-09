@@ -17,4 +17,5 @@ This repository contains scripts to clean and preprocess crawled text for traini
    pip install -r requirements.txt
 
 ## Contribution
-Anyone can contribute to this repository.
+- Anyone can contribute to this repository.
+
