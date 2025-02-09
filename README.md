@@ -15,3 +15,6 @@ This repository contains scripts to clean and preprocess crawled text for traini
 3. load the dataset you have.
    ```bash
    pip install -r requirements.txt
+
+## Contribution
+Anyone can contribute to this repository 
